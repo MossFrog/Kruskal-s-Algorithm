@@ -19,6 +19,24 @@ int main()
 	//-- Disable Key Repetition to enable button pressed events. --//
 	mainWindow.setKeyRepeatEnabled(false);
 
+	//-- Structure for storing the "Tree/Node" data --//
+	struct Node
+	{
+		int TreeID;
+		int Xpos;
+		int Ypos;
+	};
+
+	struct Edge
+	{
+		sf::Vector2i vertexOne;
+		sf::Vector2i vertexTwo;
+		double length;
+	};
+
+	//-- Every node is assigned a Unique Tree ID in the Beginning --//
+	int treeID = 0;
+
 	//-- Declarations Section --//
 	//--------------------------//
 
@@ -40,6 +58,15 @@ int main()
 	//-- Temporary active node storage vector --//
 	vector<sf::Vector2i> activeTemp;
 
+	//-- Node vector for mathematical calculation --//
+	vector<Node> nodeVect;
+	vector<Edge> edgeVect;
+
+	//-- Bool for starting the calculations --//
+	bool calcStarted = false;
+
+	int delayAmount = 0;
+
 
 	//-- Main Game Loop --//
 	while (mainWindow.isOpen())
@@ -51,74 +78,148 @@ int main()
 			if (event.type == sf::Event::Closed)
 				mainWindow.close();
 
-			//-- If the specified key is pressed push the player upwards --//
 			if (event.type == sf::Event::MouseButtonPressed)
 			{
-				if (event.key.code == sf::Mouse::Left)
+				if (!calcStarted)
 				{
-					bool validPos = true;
-
-					for (int i = 0; i < pointVector.size(); i++)
+					if (event.key.code == sf::Mouse::Left)
 					{
-						if (sqrt(pow((localPosition.x - pointVector[i].x), 2) + pow((localPosition.y - pointVector[i].y), 2)) < 25)
+						bool validPos = true;
+
+						for (int i = 0; i < pointVector.size(); i++)
 						{
-							validPos = false;
-						}
-					}
-
-					if (validPos)
-					{
-						//-- Place a pinpoint on the given click (add it to the main vector) --//
-						pointVector.push_back(localPosition);
-					}
-
-				}
-
-
-				//-- Right click to select two nodes to link --//
-				if (event.key.code == sf::Mouse::Right)
-				{
-					//-- Search for a close local point, if found then anchor and set it as "active" --//
-					for (int i = 0; i < pointVector.size(); i++)
-					{
-						if (sqrt(pow((localPosition.x - pointVector[i].x), 2) + pow((localPosition.y - pointVector[i].y), 2)) < 25)
-						{
-							if (activeTemp.size() < 2)
+							if (sqrt(pow((localPosition.x - pointVector[i].x), 2) + pow((localPosition.y - pointVector[i].y), 2)) < 100)
 							{
+								validPos = false;
+							}
+						}
 
-								if (activeTemp.size() == 1)
+						if (validPos)
+						{
+							//-- Place a pinpoint on the given click (add it to the main vector) --//
+							pointVector.push_back(localPosition);
+
+							//-- Update the Node Vector --//
+							Node newNode;
+							newNode.TreeID = treeID;
+							treeID++;
+
+							newNode.Xpos = localPosition.x;
+							newNode.Ypos = localPosition.y;
+
+							nodeVect.push_back(newNode);
+
+							cout << "- Node Added -" << endl;
+							cout << "X - Position: " << newNode.Xpos << endl;
+							cout << "Y - Position: " << newNode.Ypos << endl;
+							cout << "TreeID: " << treeID << endl;
+							cout << endl << endl;
+						}
+
+					}
+
+
+					//-- Right click to select two nodes to link --//
+					if (event.key.code == sf::Mouse::Right)
+					{
+						//-- Search for a close local point, if found then anchor and set it as "active" --//
+						for (int i = 0; i < pointVector.size(); i++)
+						{
+							if (sqrt(pow((localPosition.x - pointVector[i].x), 2) + pow((localPosition.y - pointVector[i].y), 2)) < 100)
+							{
+								if (activeTemp.size() < 2)
 								{
-									if (activeTemp[0] != pointVector[i])
+
+									if (activeTemp.size() == 1)
+									{
+										if (activeTemp[0] != pointVector[i])
+										{
+											activeTemp.push_back(pointVector[i]);
+
+											//-- Clear the "active temporary" vector after the line is added to the lineVector --//
+											sf::VertexArray tempLine(sf::Lines, 2);
+
+											tempLine[0].position = sf::Vector2f(activeTemp[1].x, activeTemp[1].y);
+											tempLine[1].position = sf::Vector2f(activeTemp[0].x, activeTemp[0].y);
+
+											tempLine[0].color = sf::Color::Red;
+											tempLine[1].color = sf::Color::Blue;
+
+											lineVector.push_back(tempLine);
+
+											activeTemp.clear();
+
+
+											//-- Add the new line to the Edge Vector, make sure it doesn't already exist. --//
+											bool valid = true;
+											for (int i = 0; i < edgeVect.size(); i++)
+											{
+												if ((edgeVect[i].vertexOne.x == activeTemp[1].x) && (edgeVect[i].vertexOne.y == activeTemp[1].y))
+												{
+													if (((edgeVect[i].vertexTwo.x == activeTemp[0].x) && (edgeVect[i].vertexTwo.y == activeTemp[0].y)))
+													{
+														valid = false;
+													}
+												}
+
+												if ((edgeVect[i].vertexTwo.x == activeTemp[1].x) && (edgeVect[i].vertexTwo.y == activeTemp[1].y))
+												{
+													if (((edgeVect[i].vertexOne.x == activeTemp[0].x) && (edgeVect[i].vertexOne.y == activeTemp[0].y)))
+													{
+														valid = false;
+													}
+												}
+											}
+
+											//-- No duplicates found, add the edge to the Vector --//
+
+											if (valid)
+											{
+												Edge newEdge;
+												newEdge.length = sqrt(pow((activeTemp[1].x - activeTemp[0].x), 2) + pow((activeTemp[1].y - activeTemp[0].y), 2));
+												newEdge.vertexOne.x = activeTemp[1].x;
+												newEdge.vertexOne.y = activeTemp[1].y;
+
+												newEdge.vertexTwo.x = activeTemp[0].x;
+												newEdge.vertexTwo.y = activeTemp[0].y;
+
+												edgeVect.push_back(newEdge);
+
+												//-- Output Edge Data to the console --//
+												cout << "- Edge Created --" << endl;
+												cout << "Vertex - 1: " << activeTemp[1].x << " " << activeTemp[1].y << endl;
+												cout << "Vertex - 2: " << activeTemp[0].x << " " << activeTemp[0].y << endl;
+												cout << "Length: " << newEdge.length << endl << endl;
+											}
+
+										}
+									}
+
+									else
 									{
 										activeTemp.push_back(pointVector[i]);
-										cout << "done" << endl;
-
-										//-- Clear the "active temporary" vector after the line is added to the lineVector --//
-										sf::VertexArray tempLine(sf::Lines, 2);
-
-										tempLine[0].position = sf::Vector2f(activeTemp[1].x, activeTemp[1].y);
-										tempLine[1].position = sf::Vector2f(activeTemp[0].x, activeTemp[0].y);
-
-										tempLine[0].color = sf::Color::Red;
-										tempLine[1].color = sf::Color::Blue;
-
-
-										lineVector.push_back(tempLine);
-
-										activeTemp.clear();
-
 									}
-								}
 
-								else
-								{
-									activeTemp.push_back(pointVector[i]);
-									cout << "done" << endl;
 								}
-
 							}
 						}
 					}
+				}
+			}
+
+			if (event.type == sf::Event::KeyReleased)
+			{
+				if (event.key.code == sf::Keyboard::Space)
+				{
+					//-- Prevent additional nodes from being added and Start the Calculation --//
+					calcStarted = true;
+					delayAmount = 250;
+
+					//-- Sort the edge Vector --//
+
+
+
+
 				}
 			}
 		}
@@ -128,6 +229,9 @@ int main()
 		//-- Debugging Section --//
 		//cout << localPosition.x << " " << localPosition.y << endl;
 
+		//-- Delay Section (Only Active When Calculating) --//
+
+		Sleep(delayAmount);
 
 		mainWindow.clear(sf::Color::Black);
 
@@ -145,11 +249,7 @@ int main()
 		}
 
 
-
-
-
-
-
+		//-- Call the display method --//
 		mainWindow.display();
 	}
 
