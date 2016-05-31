@@ -54,6 +54,7 @@ int main()
 
 	vector<sf::Vector2i> pointVector;
 	vector<sf::VertexArray> lineVector;
+	vector<sf::VertexArray> linkedVector;
 
 	//-- Temporary active node storage vector --//
 	vector<sf::Vector2i> activeTemp;
@@ -66,6 +67,7 @@ int main()
 	bool calcStarted = false;
 
 	int delayAmount = 0;
+	int solutionIndex = 0;
 
 
 	//-- Main Game Loop --//
@@ -211,20 +213,81 @@ int main()
 			{
 				if (event.key.code == sf::Keyboard::Space)
 				{
+					delayAmount = 500;
+
+					//-- Inefficiently Sort the edge Vector from small to large --//
+
+					if (!calcStarted)
+					{
+						for (int i = 0; i < edgeVect.size(); i++)
+						{
+							for (int j = i; j < edgeVect.size(); j++)
+							{
+								if (edgeVect[i].length > edgeVect[j].length)
+								{
+									swap(edgeVect[i], edgeVect[j]);
+								}
+							}
+						}
+					}
+
 					//-- Prevent additional nodes from being added and Start the Calculation --//
 					calcStarted = true;
-					delayAmount = 250;
-
-					//-- Sort the edge Vector --//
-
-
-
-
 				}
 			}
 		}
 
 		localPosition = sf::Mouse::getPosition(mainWindow);
+
+		//-- Do the necessary calculation here --//
+
+		if (calcStarted)
+		{
+			for (int i = 0; i < nodeVect.size(); i++)
+			{
+				if (edgeVect[solutionIndex].vertexOne.x == nodeVect[i].Xpos)
+				{
+					if (edgeVect[solutionIndex].vertexOne.y == nodeVect[i].Ypos)
+					{
+						for (int j = 0; j < nodeVect.size(); j++)
+						{
+							if (edgeVect[solutionIndex].vertexTwo.x == nodeVect[j].Xpos)
+							{
+								if (edgeVect[solutionIndex].vertexTwo.y == nodeVect[j].Ypos)
+								{
+									if (nodeVect[j].TreeID != nodeVect[i].TreeID)
+									{
+										//-- Convert all nodes to the new treeID preventing loop creation in the next iteration --//
+										for (int y = 0; y < nodeVect.size(); y++)
+										{
+											if ((nodeVect[y].TreeID == nodeVect[j].TreeID) && j != y)
+											{
+												nodeVect[y].TreeID = nodeVect[i].TreeID;
+											}
+										}
+										nodeVect[j].TreeID = nodeVect[i].TreeID;
+
+										//-- Add a new overlay to the linkedVector --//
+										sf::VertexArray tempLine(sf::Lines, 2);
+
+										tempLine[0].position = sf::Vector2f(edgeVect[solutionIndex].vertexOne.x, edgeVect[solutionIndex].vertexOne.y);
+										tempLine[1].position = sf::Vector2f(edgeVect[solutionIndex].vertexTwo.x, edgeVect[solutionIndex].vertexTwo.y);
+
+										tempLine[0].color = sf::Color::Yellow;
+										tempLine[1].color = sf::Color::White;
+
+										linkedVector.push_back(tempLine);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+
+			//-- Increment the solution index (Edge to check in the next iteration) --//
+			solutionIndex++;
+		}
 
 		//-- Debugging Section --//
 		//cout << localPosition.x << " " << localPosition.y << endl;
@@ -236,17 +299,23 @@ int main()
 		mainWindow.clear(sf::Color::Black);
 
 
-		//-- Draw all the given sprites --//
+		//-- Draw all the given Sprites and Primitives --//
+		for (int i = 0; i < lineVector.size(); i++)
+		{
+			mainWindow.draw(lineVector[i]);
+		}
+
+		for (int i = 0; i < linkedVector.size(); i++)
+		{
+			mainWindow.draw(linkedVector[i]);
+		}
+
 		for (int i = 0; i < pointVector.size(); i++)
 		{
 			gemSprite.setPosition(pointVector[i].x, pointVector[i].y);
 			mainWindow.draw(gemSprite);
 		}
 
-		for (int i = 0; i < lineVector.size(); i++)
-		{
-			mainWindow.draw(lineVector[i]);
-		}
 
 
 		//-- Call the display method --//
